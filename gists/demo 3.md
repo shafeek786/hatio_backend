@@ -1,10 +1,11 @@
 # demo 3
 
-Summary: 2 / 3 completed.
+Summary: 2 / 4 completed.
 
 ## Pending Todos
-- [ ] walk 4 km and burn minimum 500 kcal
+- [ ] fsdfsd
+- [ ] walking
 
 ## Completed Todos
-- [x] two
-- [x] walk
+- [x] one
+- [x] One

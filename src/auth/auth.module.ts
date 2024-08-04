@@ -11,23 +11,23 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
-    ConfigModule,
-    PassportModule.register({ defaultStrategy: 'jwt' }),
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    ConfigModule, // Provides configuration values
+    PassportModule.register({ defaultStrategy: 'jwt' }), // Configures Passport with JWT strategy
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]), // Connects Mongoose with User schema
     JwtModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
+      imports: [ConfigModule], // Imports ConfigModule for configuration
+      inject: [ConfigService], // Injects ConfigService to retrieve configuration values
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret: configService.get<string>('JWT_SECRET'), // Retrieves JWT secret from config
         signOptions: {
-          expiresIn: configService.get<string | number>('JWT_EXPIRE'),
+          expiresIn: configService.get<string | number>('JWT_EXPIRE'), // JWT expiration time
         },
       }),
     }),
-    UsersModule,
+    UsersModule, // Imports UsersModule for user-related operations
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService],
+  controllers: [AuthController], // AuthController handles authentication routes
+  providers: [AuthService, JwtStrategy], // Provides AuthService and JwtStrategy for authentication logic
+  exports: [AuthService], // Exports AuthService for use in other modules
 })
 export class AuthModule {}

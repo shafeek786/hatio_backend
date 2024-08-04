@@ -11,30 +11,45 @@ import { AddTodo } from './dto/addTodo.dto';
 import axios from 'axios';
 import { promises as fs } from 'fs';
 
+/**
+ * Service for managing projects and todos.
+ * Provides methods for creating, updating, retrieving, deleting projects and todos,
+ * and exporting project summaries to GitHub Gists.
+ */
 @Injectable()
 export class ProjectsService {
+  private readonly gistUrl: string = 'https://api.github.com/gists';
+
   constructor(
     @InjectModel(Project.name) private readonly projectModel: Model<Project>,
     @InjectModel(Todo.name) private readonly todoModel: Model<Todo>,
   ) {}
-  private readonly gistUrl: string = 'https://api.github.com/gists';
+
+  /**
+   * Creates a new project.
+   * @param title - Title of the project
+   * @param userId - ID of the user creating the project
+   * @returns Success status and created project
+   */
   async createProject(
     title: string,
+    userId: string,
   ): Promise<{ success: boolean; project: Project }> {
     try {
-      console.log('Creating project with title:', title);
-      const newProject = new this.projectModel({ title });
-      await newProject.save();
-      console.log('Project created:', newProject);
-      return { success: true, project: newProject };
+      const project = new this.projectModel({ title, user: userId });
+      const result = await project.save();
+      return { success: true, project: result };
     } catch (error) {
-      console.error('Error creating project:', error);
-      throw new InternalServerErrorException(
-        `Error creating project: ${error.message}`,
-      );
+      throw new InternalServerErrorException('Failed to create project');
     }
   }
 
+  /**
+   * Updates the title of an existing project.
+   * @param projectId - ID of the project to update
+   * @param title - New title of the project
+   * @returns Success status and updated project
+   */
   async updateProject(
     projectId: string,
     title: string,
@@ -48,17 +63,23 @@ export class ProjectsService {
       const updatedProject = await project.save();
       return { success: true, project: updatedProject };
     } catch (error) {
-      console.error('Error creating project:', error);
       throw new InternalServerErrorException(
-        `Error creating project: ${error.message}`,
+        `Error updating project: ${error.message}`,
       );
     }
   }
 
-  async getAllProjects(): Promise<{ success: boolean; projects: Project[] }> {
+  /**
+   * Retrieves all projects for a specific user.
+   * @param userId - ID of the user
+   * @returns Success status and list of projects
+   */
+  async getAllProjects(
+    userId: string,
+  ): Promise<{ success: boolean; projects: Project[] }> {
     try {
       const projects = await this.projectModel
-        .find()
+        .find({ user: userId })
         .populate('todos')
         .sort({ createdDate: -1 })
         .exec();
@@ -68,22 +89,31 @@ export class ProjectsService {
     }
   }
 
+  /**
+   * Deletes a project by its ID.
+   * @param id - ID of the project to delete
+   * @returns Success status and remaining projects
+   */
   async deleteProject(
     id: string,
   ): Promise<{ success: boolean; projects: Project[] }> {
     try {
       const result = await this.projectModel.deleteOne({ _id: id }).exec();
-
       if (result.deletedCount === 0) {
         throw new NotFoundException('Project not found');
       }
-
       const projects = await this.projectModel.find().exec();
       return { success: true, projects };
     } catch (error) {
-      throw new InternalServerErrorException('Error deleting projects');
+      throw new InternalServerErrorException('Error deleting project');
     }
   }
+
+  /**
+   * Retrieves a single project by its ID.
+   * @param id - ID of the project to retrieve
+   * @returns Success status and project details
+   */
   async getProjectById(
     id: string,
   ): Promise<{ success: boolean; project: Project }> {
@@ -108,12 +138,17 @@ export class ProjectsService {
     }
   }
 
+  /**
+   * Adds a new todo to a project.
+   * @param projectId - ID of the project to add the todo to
+   * @param data - Data for the new todo
+   * @returns Success status and the newly created todo
+   */
   async addTodoToProject(
     projectId: string,
     data: AddTodo,
   ): Promise<{ success: boolean; todo: Todo }> {
     try {
-      console.log(data);
       const { name, description } = data;
       const project = await this.getProjectById(projectId);
       const newTodo = new this.todoModel({
@@ -129,6 +164,12 @@ export class ProjectsService {
     }
   }
 
+  /**
+   * Updates the status of a todo.
+   * @param todoId - ID of the todo to update
+   * @param updateData - New status for the todo
+   * @returns Success status and updated todo
+   */
   async updateTodoStatus(
     todoId: string,
     updateData: { status: boolean },
@@ -137,7 +178,6 @@ export class ProjectsService {
       const { status } = updateData;
       const todo = await this.todoModel.findById(todoId).exec();
       if (!todo) {
-        console.error(`Todo with ID ${todoId} not found`);
         throw new NotFoundException('Todo not found');
       }
       todo.status = status;
@@ -153,6 +193,12 @@ export class ProjectsService {
     }
   }
 
+  /**
+   * Updates a todo with new data.
+   * @param todoId - ID of the todo to update
+   * @param updateData - New data for the todo
+   * @returns Success status and updated todo
+   */
   async updateTodo(
     todoId: string,
     updateData: Partial<AddTodo>,
@@ -180,6 +226,11 @@ export class ProjectsService {
     }
   }
 
+  /**
+   * Deletes a todo by its ID.
+   * @param todoId - ID of the todo to delete
+   * @returns Success status
+   */
   async deleteTodoById(todoId: string): Promise<{ success: boolean }> {
     try {
       const result = await this.todoModel.deleteOne({ _id: todoId }).exec();
@@ -196,6 +247,11 @@ export class ProjectsService {
     }
   }
 
+  /**
+   * Exports a project's summary to a GitHub Gist.
+   * @param projectId - ID of the project to export
+   * @returns Success status and the URL of the created Gist
+   */
   async exportProjectSummaryToGist(
     projectId: string,
   ): Promise<{ success: boolean; gistUrl: string }> {
@@ -206,7 +262,6 @@ export class ProjectsService {
         `${project.project.title}.md`,
         markdownContent,
       );
-      console.log(gistUrl);
       return { success: true, gistUrl };
     } catch (error) {
       throw new InternalServerErrorException(
@@ -215,6 +270,11 @@ export class ProjectsService {
     }
   }
 
+  /**
+   * Creates a markdown summary for a project.
+   * @param project - The project to summarize
+   * @returns Markdown formatted summary
+   */
   private createMarkdownSummary(project: Project): string {
     const completedTodos = project.todos.filter((todo) => todo.status).length;
     const totalTodos = project.todos.length;
@@ -222,17 +282,23 @@ export class ProjectsService {
     project.todos
       .filter((todo) => !todo.status)
       .forEach((todo) => {
-        summary += `- [ ] ${todo.description}\n`;
+        summary += `- [ ] ${todo.name}\n`;
       });
     summary += '\n## Completed Todos\n';
     project.todos
       .filter((todo) => todo.status)
       .forEach((todo) => {
-        summary += `- [x] ${todo.description}\n`;
+        summary += `- [x] ${todo.name}\n`;
       });
     return summary;
   }
 
+  /**
+   * Creates a secret Gist on GitHub with the provided file name and content.
+   * @param fileName - Name of the file for the Gist
+   * @param content - Content of the file
+   * @returns URL of the created Gist
+   */
   async createSecretGist(fileName: string, content: string): Promise<string> {
     try {
       const path = require('path');
@@ -273,15 +339,12 @@ export class ProjectsService {
         .from.string(fileContent)
         .to(pdfPath, (err) => {
           if (err) {
-            console.error('Error saving PDF:', err.message);
             throw new InternalServerErrorException('Error saving PDF');
           }
-          console.log(`PDF saved to ${pdfPath}`);
         });
 
       return response.data.html_url;
     } catch (error) {
-      console.error('Error creating Gist:', error);
       throw new InternalServerErrorException('Error creating Gist');
     }
   }
