@@ -278,17 +278,17 @@ export class ProjectsService {
   private createMarkdownSummary(project: Project): string {
     const completedTodos = project.todos.filter((todo) => todo.status).length;
     const totalTodos = project.todos.length;
-    let summary = `# ${project.title}\n\nSummary: ${completedTodos} / ${totalTodos} completed.\n\n## Pending Todos\n`;
+    let summary = `# ${project.title}\n\nSummary: ${completedTodos} / ${totalTodos} todos completed.\n\n## Pending Todos\n`;
     project.todos
       .filter((todo) => !todo.status)
       .forEach((todo) => {
-        summary += `- [ ] ${todo.name}\n`;
+        summary += `- [ ] ${todo.name}\n\n${todo.description}\n\n`;
       });
     summary += '\n## Completed Todos\n';
     project.todos
       .filter((todo) => todo.status)
       .forEach((todo) => {
-        summary += `- [x] ${todo.name}\n`;
+        summary += `- [x] ${todo.name}\n\n${todo.description}\n\n`;
       });
     return summary;
   }
