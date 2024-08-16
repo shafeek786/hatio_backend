@@ -10,6 +10,7 @@ import { Todo } from 'src/schemas/todo.schema';
 import { AddTodo } from './dto/addTodo.dto';
 import axios from 'axios';
 import { promises as fs } from 'fs';
+import { query } from 'express';
 
 /**
  * Service for managing projects and todos.
@@ -78,8 +79,9 @@ export class ProjectsService {
     userId: string,
   ): Promise<{ success: boolean; projects: Project[] }> {
     try {
+      const query = { user: userId, isDeleted: false };
       const projects = await this.projectModel
-        .find({ user: userId })
+        .find(query)
         .populate('todos')
         .sort({ createdDate: -1 })
         .exec();
@@ -89,6 +91,21 @@ export class ProjectsService {
     }
   }
 
+  async getAllDeletedProjects(
+    userId: string,
+  ): Promise<{ success: boolean; projects: Project[] }> {
+    try {
+      const query = { user: userId, isDeleted: true };
+      const projects = await this.projectModel
+        .find(query)
+        .populate('todos')
+        .sort({ createdDate: -1 })
+        .exec();
+      return { success: true, projects: projects };
+    } catch (error) {
+      throw new InternalServerErrorException('Error retrieving projects');
+    }
+  }
   /**
    * Deletes a project by its ID.
    * @param id - ID of the project to delete
@@ -98,11 +115,15 @@ export class ProjectsService {
     id: string,
   ): Promise<{ success: boolean; projects: Project[] }> {
     try {
-      const result = await this.projectModel.deleteOne({ _id: id }).exec();
-      if (result.deletedCount === 0) {
-        throw new NotFoundException('Project not found');
-      }
-      const projects = await this.projectModel.find().exec();
+      const result = await this.projectModel
+        .updateOne({ _id: id }, { isDeleted: true })
+        .exec();
+      // if (result.deletedCount === 0) {
+      //   throw new NotFoundException('Project not found');
+      // }
+      const projects = await this.projectModel
+        .find({ isDeleted: false })
+        .exec();
       return { success: true, projects };
     } catch (error) {
       throw new InternalServerErrorException('Error deleting project');
@@ -233,10 +254,13 @@ export class ProjectsService {
    */
   async deleteTodoById(todoId: string): Promise<{ success: boolean }> {
     try {
-      const result = await this.todoModel.deleteOne({ _id: todoId }).exec();
-      if (result.deletedCount === 0) {
-        throw new NotFoundException('Todo not found');
-      }
+      const result = await this.todoModel
+        .updateOne({ _id: todoId }, { isDeleted: true })
+        .exec();
+      // const result = await this.todoModel.deleteOne({ _id: todoId }).exec();
+      // if (result.deletedCount === 0) {
+      //   throw new NotFoundException('Todo not found');
+      // }
       return { success: true };
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -244,6 +268,16 @@ export class ProjectsService {
       } else {
         throw new InternalServerErrorException('Error deleting todo');
       }
+    }
+  }
+
+  async getDeletedTodo(id: string): Promise<any> {
+    try {
+      const userId = id;
+      const todos = await this.todoModel.find({ isDelted: true });
+      return { deletedTodos: todos };
+    } catch (error) {
+      throw new InternalServerErrorException(error.message);
     }
   }
 

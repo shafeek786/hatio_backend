@@ -19,6 +19,9 @@ export class Project extends Document {
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Todo' }] })
   todos: Todo[]; // List of todos related to the project
+
+  @Prop({ default: false })
+  isDeleted: boolean;
 }
 
 // Create schema instance for Project class

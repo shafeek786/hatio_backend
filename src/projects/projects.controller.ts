@@ -55,7 +55,10 @@ export class ProjectsController {
   ): Promise<{ success: boolean; project: Project }> {
     return this.projectsService.updateProject(projectId, title);
   }
-
+  @Get('get_deleted/:id')
+  async getDetedTodo(@Param('id') id: string): Promise<any> {
+    return this.projectsService.getDeletedTodo(id);
+  }
   /**
    * Delete a project by ID.
    * @param projectId Project ID.
@@ -158,5 +161,10 @@ export class ProjectsController {
     @Param('projectId') projectId: string,
   ): Promise<{ success: boolean; gistUrl: string }> {
     return this.projectsService.exportProjectSummaryToGist(projectId);
+  }
+
+  @Get('get_deleted_project/:id')
+  async getDeletedProject(@Param('id') id: string): Promise<any> {
+    return this.projectsService.getAllDeletedProjects(id);
   }
 }

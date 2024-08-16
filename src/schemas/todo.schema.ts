@@ -21,6 +21,9 @@ export class Todo extends Document {
 
   @Prop({ default: Date.now })
   updatedDate: Date; // Timestamp of when the todo item was last updated
+
+  @Prop({ default: false })
+  isDeleted: boolean;
 }
 
 // Create schema instance for Todo class
